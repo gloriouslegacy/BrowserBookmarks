@@ -1,4 +1,3 @@
-
 name: Build and Release
 
 on:
@@ -136,7 +135,8 @@ jobs:
           $versionInfo | Out-File -FilePath "version_info.txt" -Encoding UTF8
           
           Write-Host "=== Generated version_info.txt ==="
-          Get-Content "version_info.txt
+          Get-Content "version_info.txt"
+
 
       # Inject version into source code
       - name: Inject Version into Source
