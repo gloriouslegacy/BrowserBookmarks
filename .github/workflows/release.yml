@@ -78,57 +78,66 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.vars.outputs.version }}"
-          $versionParts = $version -replace '-.*','' -split '\.'
+          Write-Host "Raw version: $version"
           
-          # Pad version to 3 parts (e.g., 1.0 -> 1.0.0)
+          $versionParts = $version -replace '-.*','' -split '\.'
+          Write-Host "Version parts count: $($versionParts.Count)"
+          Write-Host "Version parts: $versionParts"
+          
+          # Pad version to 3 parts
           while ($versionParts.Count -lt 3) {
             $versionParts += "0"
           }
           
-          $v0 = $versionParts[0]
-          $v1 = $versionParts[1]
-          $v2 = $versionParts[2]
+          $v0 = [int]$versionParts[0]
+          $v1 = [int]$versionParts[1]
+          $v2 = [int]$versionParts[2]
           $versionStr = "$v0.$v1.$v2"
           
-          Write-Host "Building version: $versionStr"
+          Write-Host "Final version: $versionStr (v0=$v0, v1=$v1, v2=$v2)"
           
-          # Create version_info.txt without using here-string variable substitution
-          "# UTF-8 encoding`n" | Out-File -FilePath "version_info.txt" -Encoding UTF8
-          "VSVersionInfo(" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "  ffi=FixedFileInfo(" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    filevers=($v0, $v1, $v2, 0)," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    prodvers=($v0, $v1, $v2, 0)," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    mask=0x3f," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    flags=0x0," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    OS=0x40004," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    fileType=0x1," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    subtype=0x0," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    date=(0, 0)" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    )," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "  kids=[" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    StringFileInfo(" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "      [" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "      StringTable(" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        u'041204B0'," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        [" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'Comments', u'Browser Bookmarks Manager')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'CompanyName', u'gloriouslegacy')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'FileDescription', u'BrowserBookmarks.exe')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'FileVersion', u'$versionStr')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'InternalName', u'BrowserBookmarks.exe')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'LegalCopyright', u'Copyright (c) 2025 gloriouslegacy')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'LegalTrademarks', u'')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'OriginalFilename', u'BrowserBookmarks.exe')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'ProductName', u'BrowserBookmarks')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'ProductVersion', u'$versionStr')," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        StringStruct(u'SpecialBuild', u'')" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "        ]" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "      )" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "      ]" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    )," | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "    VarFileInfo([VarStruct(u'Translation', [0x0412, 1200])])" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          "  ]" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
-          ")" | Out-File -FilePath "version_info.txt" -Encoding UTF8 -Append
+          # Build version_info.txt content as array then join
+          $lines = @(
+            "# UTF-8 encoding",
+            "",
+            "VSVersionInfo(",
+            "  ffi=FixedFileInfo(",
+            "    filevers=($v0, $v1, $v2, 0),",
+            "    prodvers=($v0, $v1, $v2, 0),",
+            "    mask=0x3f,",
+            "    flags=0x0,",
+            "    OS=0x40004,",
+            "    fileType=0x1,",
+            "    subtype=0x0,",
+            "    date=(0, 0)",
+            "    ),",
+            "  kids=[",
+            "    StringFileInfo(",
+            "      [",
+            "      StringTable(",
+            "        u'041204B0',",
+            "        [",
+            "        StringStruct(u'Comments', u'Browser Bookmarks Manager'),",
+            "        StringStruct(u'CompanyName', u'gloriouslegacy'),",
+            "        StringStruct(u'FileDescription', u'BrowserBookmarks.exe'),",
+            "        StringStruct(u'FileVersion', u'$versionStr'),",
+            "        StringStruct(u'InternalName', u'BrowserBookmarks.exe'),",
+            "        StringStruct(u'LegalCopyright', u'Copyright (c) 2025 gloriouslegacy'),",
+            "        StringStruct(u'LegalTrademarks', u''),",
+            "        StringStruct(u'OriginalFilename', u'BrowserBookmarks.exe'),",
+            "        StringStruct(u'ProductName', u'BrowserBookmarks'),",
+            "        StringStruct(u'ProductVersion', u'$versionStr'),",
+            "        StringStruct(u'SpecialBuild', u'')",
+            "        ]",
+            "      )",
+            "      ]",
+            "    ),",
+            "    VarFileInfo([VarStruct(u'Translation', [0x0412, 1200])])",
+            "  ]",
+            ")"
+          )
+          
+          $lines -join "`n" | Out-File -FilePath "version_info.txt" -Encoding UTF8
           
           Write-Host "=== Generated version_info.txt ==="
           Get-Content "version_info.txt"
