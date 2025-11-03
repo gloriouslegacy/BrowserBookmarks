@@ -1,3 +1,4 @@
+
 name: Build and Release
 
 on:
@@ -117,7 +118,7 @@ jobs:
                   StringStruct(u'FileDescription', u'BrowserBookmarks.exe'),
                   StringStruct(u'FileVersion', u'$versionStr'),
                   StringStruct(u'InternalName', u'BrowserBookmarks.exe'),
-                  StringStruct(u'LegalCopyright', u'Copyright © 2025 gloriouslegacy All rights reserved.'),
+                  StringStruct(u'LegalCopyright', u'Copyright (c) 2025 gloriouslegacy All rights reserved.'),
                   StringStruct(u'LegalTrademarks', u''),
                   StringStruct(u'OriginalFilename', u'BrowserBookmarks.exe'),
                   StringStruct(u'ProductName', u'BrowserBookmarks'),
@@ -135,8 +136,7 @@ jobs:
           $versionInfo | Out-File -FilePath "version_info.txt" -Encoding UTF8
           
           Write-Host "=== Generated version_info.txt ==="
-          Get-Content "version_info.txt"
-
+          Get-Content "version_info.txt
 
       # Inject version into source code
       - name: Inject Version into Source
@@ -158,8 +158,8 @@ jobs:
           # Read source file
           $content = Get-Content "winBookmarks.py" -Raw -Encoding UTF8
           
-          # Replace APP_VERSION
-          $content = $content -replace 'APP_VERSION = "[\d\.]+"', "APP_VERSION = `"$versionStr`""
+          # Replace CURRENT_VERSION
+          $content = $content -replace 'CURRENT_VERSION = "0\.0\.0"', "CURRENT_VERSION = `"$versionStr`""
           
           # Write back
           $content | Out-File -FilePath "winBookmarks.py" -Encoding UTF8 -NoNewline
@@ -167,7 +167,7 @@ jobs:
           Write-Host "✓ Version injected successfully"
           
           # Verify
-          $injectedLine = Get-Content "winBookmarks.py" | Select-String "APP_VERSION"
+          $injectedLine = Get-Content "winBookmarks.py" | Select-String "CURRENT_VERSION"
           Write-Host "Verified: $injectedLine"
 
       # Build Updater executable

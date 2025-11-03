@@ -14,7 +14,8 @@ import urllib.request
 import urllib.error
 
 # 버전 정보 
-APP_VERSION = "0.0.0"
+# APP_VERSION = "0.0.0"
+CURRENT_VERSION = "0.0.0"
 GITHUB_REPO = "gloriouslegacy/BrowserBookmarks"
 VERSION_CHECK_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
