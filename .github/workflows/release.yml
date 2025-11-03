@@ -31,7 +31,7 @@ jobs:
             base_version="${GITHUB_REF#refs/tags/v}"
             version="$base_version"
             release_name="$base_version"
-          else:
+          else
             version="0.0.0-dev-$(date +%Y%m%d)"
             base_version="0.0.0-dev"
             release_name="$version"
