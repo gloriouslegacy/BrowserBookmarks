@@ -112,15 +112,15 @@ jobs:
                 StringTable(
                   u'041204B0',
                   [
-                  StringStruct(u'Comments', u'Browser Bookmark Backup and Restore Tool'),
+                  StringStruct(u'Comments', u'Browser Bookmarks Manager'),
                   StringStruct(u'CompanyName', u'gloriouslegacy'),
-                  StringStruct(u'FileDescription', u'Browser Bookmarks Manager'),
+                  StringStruct(u'FileDescription', u'BrowserBookmarks.exe'),
                   StringStruct(u'FileVersion', u'$versionStr'),
                   StringStruct(u'InternalName', u'BrowserBookmarks.exe'),
                   StringStruct(u'LegalCopyright', u'Copyright © 2025 gloriouslegacy All rights reserved.'),
                   StringStruct(u'LegalTrademarks', u''),
                   StringStruct(u'OriginalFilename', u'BrowserBookmarks.exe'),
-                  StringStruct(u'ProductName', u'Browser Bookmarks Manager'),
+                  StringStruct(u'ProductName', u'BrowserBookmarks'),
                   StringStruct(u'ProductVersion', u'$versionStr'),
                   StringStruct(u'SpecialBuild', u'')
                   ]
@@ -136,6 +136,7 @@ jobs:
           
           Write-Host "=== Generated version_info.txt ==="
           Get-Content "version_info.txt"
+
 
       # Inject version into source code
       - name: Inject Version into Source
