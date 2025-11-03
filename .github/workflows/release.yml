@@ -211,6 +211,18 @@ jobs:
         run: |
           Write-Host "=== Building Portable Version ==="
           
+          # Create language folder if not exists
+          if (-not (Test-Path "language")) {
+            Write-Host "Creating language folder..."
+            New-Item -ItemType Directory -Path "language" -Force
+            
+            # Create dummy lang_ko.ini
+            "[app]" | Out-File -FilePath "language/lang_ko.ini" -Encoding UTF8
+            "title = Browser Bookmarks Manager" | Out-File -FilePath "language/lang_ko.ini" -Encoding UTF8 -Append
+            
+            Write-Host "✓ Language folder created"
+          }
+          
           $iconPath = "icon/icon.ico"
           
           # Build portable version with version info
