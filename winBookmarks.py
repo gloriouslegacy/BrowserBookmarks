@@ -14,7 +14,6 @@ import urllib.request
 import urllib.error
 
 # 버전 정보 
-# APP_VERSION = "0.0.0"
 CURRENT_VERSION = "0.0.0"
 GITHUB_REPO = "gloriouslegacy/BrowserBookmarks"
 VERSION_CHECK_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -29,12 +28,12 @@ TEXT_COLOR = "#333333"
 BUTTON_FG = "#ffffff"
 
 # 다크모드 색상 
-DARK_BG_COLOR = "#1a1a1a"
-DARK_TEXT_COLOR = "#ffffff"
-DARK_FRAME_BG = "#1a1a1a"
-DARK_ENTRY_BG = "#0d0d0d"
-DARK_PRIMARY_COLOR = "#60cdff"
-DARK_SECONDARY_COLOR = "#f1707b"
+DARK_BG_COLOR = "#0d0d0d"
+DARK_TEXT_COLOR = "#d0d0d0"
+DARK_FRAME_BG = "#0d0d0d"
+DARK_ENTRY_BG = "#000000"
+DARK_PRIMARY_COLOR = "#1a3a52"
+DARK_SECONDARY_COLOR = "#5a1a1a"
 
 def resource_path(relative_path):
     """
@@ -251,7 +250,7 @@ class UpdateManager:
     def __init__(self, lang_manager):
         self.lang_manager = lang_manager
         self.check_url = VERSION_CHECK_URL
-        self.current_version = APP_VERSION
+        self.current_version = CURRENT_VERSION
         
     def check_for_updates(self, callback=None):
         """업데이트 확인 (비동기)"""
@@ -806,7 +805,7 @@ class BookmarkManagerGUI:
     def _show_update_dialog(self, version_info):
         """업데이트 다이얼로그 표시"""
         message = f"{self.lang_manager.get('update', 'available')}\n\n"
-        message += f"현재 버전: {APP_VERSION}\n"
+        message += f"현재 버전: {CURRENT_VERSION}\n"
         message += f"최신 버전: {version_info['version']}\n\n"
         message += "업데이트를 다운로드하시겠습니까?"
         
@@ -881,7 +880,7 @@ class BookmarkManagerGUI:
     def _show_about(self):
         """About 다이얼로그"""
         about_text = f"{self.lang_manager.get('app', 'title')}\n\n"
-        about_text += f"{self.lang_manager.get('about', 'version')}: {APP_VERSION}\n"
+        about_text += f"{self.lang_manager.get('about', 'version')}: {CURRENT_VERSION}\n"
         about_text += f"{self.lang_manager.get('about', 'description')}\n\n"
         about_text += f"GitHub: {GITHUB_REPO}"
         
