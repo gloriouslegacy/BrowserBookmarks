@@ -1,0 +1,11 @@
+# Windows Bookmark Manager Dependencies
+
+# PyInstaller for building executables
+pyinstaller>=6.0.0
+
+# Standard library (no additional packages needed for core functionality)
+# tkinter - included with Python
+# json - standard library
+# configparser - standard library
+# hashlib - standard library
+# urllib - standard library
