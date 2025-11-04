@@ -361,9 +361,21 @@ jobs:
           [Tasks]
           Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"
           
+          
+          [Code]
+          procedure CurStepChanged(CurStep: TSetupStep);
+          var
+            ResultCode: Integer;
+          begin
+            if CurStep = ssPostInstall then
+            begin
+              MsgBox('업데이트가 완료되었습니다!' + #13#10#13#10 + 'Update Complete!', mbInformation, MB_OK);
+              Exec(ExpandConstant('{app}\BrowserBookmarks.exe'), '', '', SW_SHOW, ewNoWait, ResultCode);
+            end;
+          end;
+          
           [Run]
-          ; 업데이트 완료 메시지 표시 후 프로그램 실행
-          Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('업데이트가 완료되었습니다!`n프로그램을 시작합니다.`n`nUpdate Complete!`nLaunching the program...', 'Browser Bookmarks', 'OK', 'Information'); Start-Process '{{app}}\BrowserBookmarks.exe'"""; Flags: runhidden
+          ; Code section에서 처리하므로 여기는 비워둠
           "@
           
           $issScript | Out-File -FilePath "setup.iss" -Encoding UTF8
