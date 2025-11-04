@@ -108,7 +108,8 @@ class UpdaterGUI:
             if is_setup_installer:
                 self.update_status("Setup 인스톨러 실행 중...", "자동 설치가 진행됩니다...")
                 
-                subprocess.Popen([
+                # Setup 프로세스 시작
+                setup_process = subprocess.Popen([
                     self.downloaded_file,
                     '/VERYSILENT',
                     '/SUPPRESSMSGBOXES',
@@ -116,18 +117,38 @@ class UpdaterGUI:
                     '/NORESTART'
                 ], shell=False)
                 
-                # 설치 대기
-                for i in range(10):
+                # Setup이 완료될 때까지 대기
+                self.update_status("설치 중...", "설치가 진행 중입니다...")
+                
+                # 프로세스가 종료될 때까지 대기 (최대 60초)
+                for i in range(60):
+                    if setup_process.poll() is not None:
+                        # 설치 완료
+                        self.update_status("설치 완료", "프로그램을 시작합니다...")
+                        break
                     time.sleep(1)
-                    self.update_status("설치 중...", f"{i+1}/10초")
+                    if i < 30:
+                        self.update_status("설치 중...", f"{i+1}초 경과...")
+                else:
+                    # 타임아웃
+                    self.update_status("설치 대기 중...", "설치가 완료되기를 기다리는 중...")
+                
+                # 추가 대기 (파일 정리 시간)
+                time.sleep(3)
                 
                 # 프로그램 재시작
                 self.update_status("프로그램 재시작 중...", "")
                 time.sleep(1)
-                target_dir = os.path.dirname(self.target_file)
-                subprocess.Popen([self.target_file], shell=False, cwd=target_dir)
                 
-                self.update_status("업데이트 완료!", "프로그램이 시작됩니다.")
+                # 재시작 시도
+                target_dir = os.path.dirname(self.target_file)
+                try:
+                    subprocess.Popen([self.target_file], shell=False, cwd=target_dir)
+                    self.update_status("업데이트 완료!", "프로그램이 시작됩니다.")
+                except Exception as e:
+                    # 재시작 실패 시 사용자에게 알림
+                    self.show_error(f"프로그램 재시작에 실패했습니다.\n수동으로 프로그램을 시작해주세요.\n\n오류: {str(e)}")
+                
                 time.sleep(2)
                 self.close_window()
                 return
