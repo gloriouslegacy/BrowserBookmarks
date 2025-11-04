@@ -363,7 +363,7 @@ jobs:
           
           [Run]
           ; 업데이트 완료 메시지 표시 후 프로그램 실행
-          Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('업데이트가 완료되었습니다!{0}프로그램을 시작합니다.{0}{0}Update Complete!{0}Launching the program...' -f [Environment]::NewLine, 'Browser Bookmarks', 'OK', 'Information'); Start-Process '{app}\BrowserBookmarks.exe'"""; Flags: runhidden
+          Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('업데이트가 완료되었습니다!`n프로그램을 시작합니다.`n`nUpdate Complete!`nLaunching the program...', 'Browser Bookmarks', 'OK', 'Information'); Start-Process '{{app}}\BrowserBookmarks.exe'"""; Flags: runhidden
           "@
           
           $issScript | Out-File -FilePath "setup.iss" -Encoding UTF8
