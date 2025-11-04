@@ -225,7 +225,7 @@ jobs:
           
           $iconPath = "icon/icon.ico"
           
-          # Build portable version with version info
+          # Build portable version with version info (onefile)
           pyinstaller --onefile `
             --windowed `
             --name "BrowserBookmarks" `
@@ -246,6 +246,41 @@ jobs:
             Write-Host "✓ Portable EXE created: $($size / 1MB) MB"
           } else {
             Write-Host "✗ Portable EXE not found"
+            exit 1
+          }
+
+      # Build Setup version (onedir)
+      - name: Build Setup Version (onedir)
+        shell: pwsh
+        run: |
+          Write-Host "=== Building Setup Version (onedir) ==="
+          
+          $iconPath = "icon/icon.ico"
+          
+          # Clean previous build
+          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+          if (Test-Path "dist_setup") { Remove-Item -Recurse -Force "dist_setup" }
+          
+          # Build onedir version for Setup
+          pyinstaller --onedir `
+            --windowed `
+            --name "BrowserBookmarks" `
+            --clean `
+            --icon="$iconPath" `
+            --version-file="version_info.txt" `
+            --distpath="dist_setup" `
+            winBookmarks.py
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "✗ Setup version build failed"
+            exit 1
+          }
+          
+          if (Test-Path "dist_setup/BrowserBookmarks/BrowserBookmarks.exe") {
+            $folderSize = (Get-ChildItem "dist_setup/BrowserBookmarks" -Recurse | Measure-Object -Property Length -Sum).Sum / 1MB
+            Write-Host "✓ Setup version created: $([math]::Round($folderSize, 2)) MB"
+          } else {
+            Write-Host "✗ Setup version not found"
             exit 1
           }
 
@@ -303,16 +338,17 @@ jobs:
           UninstallDisplayIcon={app}\BrowserBookmarks.exe
           VersionInfoVersion=$versionStr
           PrivilegesRequired=lowest
-          PrivilegesRequiredOverridesAllowed=dialog
+          PrivilegesRequiredOverridesAllowed=commandline
           UsePreviousAppDir=yes
           DirExistsWarning=no
+          DisableProgramGroupPage=yes
           
           [Languages]
           Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
           Name: "english"; MessagesFile: "compiler:Default.isl"
           
           [Files]
-          Source: "dist\BrowserBookmarks.exe"; DestDir: "{app}"; Flags: ignoreversion
+          Source: "dist_setup\BrowserBookmarks\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
           Source: "dist\updater.exe"; DestDir: "{app}"; Flags: ignoreversion
           
           [Icons]

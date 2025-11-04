@@ -89,13 +89,18 @@ def main():
                 shutil.rmtree(extract_dir)
             print("✓ 임시 파일 삭제")
         
-        # 프로그램 재시작
-        print(f"\n프로그램 재시작 중...")
-        subprocess.Popen([target_file], shell=False)
+        # 프로그램 재시작 전 충분히 대기
+        print(f"\n프로그램 재시작 준비 중...")
+        time.sleep(2)
+        
+        # 프로그램 재시작 (작업 디렉토리 설정)
+        print(f"프로그램 재시작 중...")
+        target_dir = os.path.dirname(target_file)
+        subprocess.Popen([target_file], shell=False, cwd=target_dir)
         print("✓ 재시작 완료")
         
         print("\n업데이트가 성공적으로 완료되었습니다!")
-        time.sleep(2)
+        time.sleep(1)
         
     except Exception as e:
         print(f"\n✗ 업데이트 실패: {e}")
