@@ -38,7 +38,7 @@ DARK_SECONDARY_COLOR = "#5a1a1a"
 def resource_path(relative_path):
     """
     빌드된 실행 파일 환경에서 리소스를 찾는 경로를 반환하고, 
-    일반 실행 환경에서는 현재 경로를 반환합니다.
+    일반 실행 환경에서는 현재 경로를 반환.
     """
     try:
         # PyInstaller로 빌드된 경우
@@ -104,16 +104,18 @@ class ConfigManager:
 class LanguageManager:
     def __init__(self, config_manager):
         self.config_manager = config_manager
-        self.lang_dir = "language"
+        # Portable 버전: 실행 파일과 같은 경로의 language 폴더 사용
+        exe_dir = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else __file__)
+        self.lang_dir = os.path.join(exe_dir, "language")
         self.current_lang = config_manager.get("language", "ko")
         self.translations = {}
         self.load_language()
     
     def load_language(self):
-        lang_file = os.path.join(self.lang_dir, f"lang_{self.current_lang}.ini")
+        # 언어 파일 항상 재생성 (업데이트된 키 반영)
+        self.create_default_language_files()
         
-        if not os.path.exists(lang_file):
-            self.create_default_language_files()
+        lang_file = os.path.join(self.lang_dir, f"lang_{self.current_lang}.ini")
         
         config = configparser.ConfigParser()
         try:
@@ -122,7 +124,6 @@ class LanguageManager:
                 self.translations[section] = dict(config.items(section))
         except Exception as e:
             print(f"언어 파일 로드 실패: {e}")
-            self.create_default_language_files()
     
     def create_default_language_files(self):
         os.makedirs(self.lang_dir, exist_ok=True)
@@ -161,6 +162,15 @@ select_folder = 백업 폴더를 선택해주세요.
 file_not_found = 북마크 파일을 찾을 수 없습니다.
 restore_file_missing = 복구 파일이 백업 폴더에 없습니다.
 browser_running = 브라우저가 실행 중입니다. 종료 후 다시 시도하세요.
+sync_warning_title = ⚠️ 브라우저 복구 전: 클라우드 동기화 경고
+sync_warning_edge = 엣지(Edge)의 **Microsoft 계정 동기화**
+sync_warning_chrome = 크롬(Chrome)의 **Google 계정 동기화**
+sync_warning_firefox = 파이어폭스(Firefox)의 **Firefox Sync**
+sync_warning_message = **{browser}** 복구 시 **클라우드 동기화 기능**이 복구된 북마크를 이전 상태로 덮어쓸 수 있습니다.
+    
+    복구 전, **{browser} 브라우저를 수동으로 켜서 {sync_detail} 기능을 '끄기'**로 설정해야 합니다.
+    
+    **[예]**를 누르면 브라우저를 강제 종료하고 복구 작업을 시작합니다. 동기화를 껐는지 확인 후 진행해 주세요.
 
 [update]
 checking = 업데이트 확인 중...
@@ -171,6 +181,12 @@ installing = 설치 중...
 complete = 업데이트 완료
 failed = 업데이트 실패
 title = 업데이트
+current_version = 현재 버전
+latest_version = 최신 버전
+download_question = 업데이트를 다운로드하시겠습니까?
+download_url_error = 다운로드 URL을 찾을 수 없습니다.
+download_failed = 다운로드 실패
+install_failed = 설치 실패
 
 [about]
 version = 버전
@@ -212,6 +228,15 @@ select_folder = Please select a backup folder.
 file_not_found = Bookmark file not found.
 restore_file_missing = Restore file missing in backup folder.
 browser_running = Browser is running. Please close and try again.
+sync_warning_title = ⚠️ Before Restore: Cloud Sync Warning
+sync_warning_edge = Edge's **Microsoft Account Sync**
+sync_warning_chrome = Chrome's **Google Account Sync**
+sync_warning_firefox = Firefox's **Firefox Sync**
+sync_warning_message = When restoring **{browser}**, **cloud sync** may overwrite your restored bookmarks.
+    
+    Before restoring, please manually open **{browser}** and **disable {sync_detail}**.
+    
+    Press **[Yes]** to force close the browser and start restoration. Make sure sync is disabled before proceeding.
 
 [update]
 checking = Checking for updates...
@@ -222,6 +247,12 @@ installing = Installing...
 complete = Update Complete
 failed = Update Failed
 title = Update
+current_version = Current Version
+latest_version = Latest Version
+download_question = Would you like to download the update?
+download_url_error = Download URL not found.
+download_failed = Download failed
+install_failed = Installation failed
 
 [about]
 version = Version
@@ -234,8 +265,6 @@ description = Browser Bookmark Backup/Restore Tool for Windows
         
         with open(os.path.join(self.lang_dir, "lang_en.ini"), 'w', encoding='utf-8') as f:
             f.write(en_content)
-        
-        self.load_language()
     
     def get(self, section, key, default=""):
         return self.translations.get(section, {}).get(key, default)
@@ -348,7 +377,7 @@ class UpdateManager:
 
 # 브라우저별 북마크 경로 정의 
 def get_browser_paths():
-    """각 브라우저의 기본 북마크 파일 경로를 반환합니다."""
+    """각 브라우저의 기본 북마크 파일 경로를 반환"""
     user_profile = os.environ.get('USERPROFILE')
     
     paths = {
@@ -395,7 +424,7 @@ BROWSER_EXE_MAP = {
 
 # 핵심 로직 함수 
 def perform_backup(browser_name, backup_dir):
-    """지정된 브라우저의 북마크 파일을 지정된 디렉토리에 백업합니다."""
+    """지정된 브라우저의 북마크 파일을 지정된 디렉토리에 백업."""
     src_path = BROWSER_PATHS.get(browser_name)
     backup_filename = BACKUP_FILENAME_MAP.get(browser_name)
     
@@ -742,18 +771,19 @@ class BookmarkManagerGUI:
         dir_path = self.backup_dir.get()
         self.config_manager.set("last_browser", browser)
         
-        # 브라우저별 동기화 설명
-        sync_warning_details = {
-            "Edge": "엣지(Edge)의 **Microsoft 계정 동기화**",
-            "Chrome": "크롬(Chrome)의 **Google 계정 동기화**",
-            "Firefox": "파이어폭스(Firefox)의 **Firefox Sync**"
+        # 브라우저별 동기화 설명 (다국어)
+        sync_key_map = {
+            "Edge": "sync_warning_edge",
+            "Chrome": "sync_warning_chrome",
+            "Firefox": "sync_warning_firefox"
         }
+        sync_detail = self.lang_manager.get("messages", sync_key_map.get(browser, "sync_warning_edge"))
         
-        pre_sync_title = "⚠️ 브라우저 복구 전: 클라우드 동기화 경고"
-        pre_sync_message = (
-            f"**{browser}** 복구 시 **클라우드 동기화 기능**이 복구된 북마크를 이전 상태로 덮어쓸 수 있습니다.\n\n"
-            f"복구 전, **{browser} 브라우저를 수동으로 켜서 {sync_warning_details.get(browser, '클라우드 동기화')} 기능을 '끄기'**로 설정해야 합니다.\n\n"
-            "**[예]**를 누르면 브라우저를 강제 종료하고 복구 작업을 시작합니다. 동기화를 껐는지 확인 후 진행해 주세요."
+        # 경고 메시지
+        pre_sync_title = self.lang_manager.get("messages", "sync_warning_title")
+        pre_sync_message = self.lang_manager.get("messages", "sync_warning_message").format(
+            browser=browser,
+            sync_detail=sync_detail
         )
         
         must_proceed = messagebox.askyesno(pre_sync_title, pre_sync_message, icon='warning')
@@ -805,9 +835,9 @@ class BookmarkManagerGUI:
     def _show_update_dialog(self, version_info):
         """업데이트 다이얼로그 표시"""
         message = f"{self.lang_manager.get('update', 'available')}\n\n"
-        message += f"현재 버전: {CURRENT_VERSION}\n"
-        message += f"최신 버전: {version_info['version']}\n\n"
-        message += "업데이트를 다운로드하시겠습니까?"
+        message += f"{self.lang_manager.get('update', 'current_version')}: {CURRENT_VERSION}\n"
+        message += f"{self.lang_manager.get('update', 'latest_version')}: {version_info['version']}\n\n"
+        message += self.lang_manager.get('update', 'download_question')
         
         if messagebox.askyesno(self.lang_manager.get("update", "title"), message):
             self._download_and_install_update(version_info)
@@ -815,7 +845,10 @@ class BookmarkManagerGUI:
     def _download_and_install_update(self, version_info):
         """업데이트 다운로드 및 설치"""
         if not version_info.get('download_url'):
-            messagebox.showerror("오류", "다운로드 URL을 찾을 수 없습니다.")
+            messagebox.showerror(
+                self.lang_manager.get("messages", "error"),
+                self.lang_manager.get("update", "download_url_error")
+            )
             return
         
         progress_window = tk.Toplevel(self.master)
@@ -844,7 +877,7 @@ class BookmarkManagerGUI:
                 update_file = self.update_manager.download_update(download_url, update_progress)
                 
                 if not update_file:
-                    raise Exception("다운로드 실패")
+                    raise Exception(self.lang_manager.get("update", "download_failed"))
                 
                 # 백업 생성
                 self.update_manager.create_backup()
@@ -859,7 +892,7 @@ class BookmarkManagerGUI:
                     )
                     self.master.quit()
                 else:
-                    raise Exception("설치 실패")
+                    raise Exception(self.lang_manager.get("update", "install_failed"))
                     
             except Exception as e:
                 progress_window.destroy()

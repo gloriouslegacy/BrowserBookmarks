@@ -249,6 +249,99 @@ jobs:
             exit 1
           }
 
+      # Install Inno Setup
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          Write-Host "=== Installing Inno Setup ==="
+          
+          # Download Inno Setup
+          $innoUrl = "https://jrsoftware.org/download.php/is.exe"
+          $innoInstaller = "innosetup.exe"
+          
+          Invoke-WebRequest -Uri $innoUrl -OutFile $innoInstaller
+          
+          # Silent install
+          Start-Process -FilePath $innoInstaller -Args "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
+          
+          Write-Host "✓ Inno Setup installed"
+
+      # Build Setup version with Inno Setup
+      - name: Build Setup Version
+        shell: pwsh
+        run: |
+          Write-Host "=== Building Setup Version ==="
+          
+          $version = "${{ steps.vars.outputs.version }}"
+          $versionParts = $version -replace '-.*','' -split '\.'
+          
+          # Pad version to 3 parts
+          while ($versionParts.Count -lt 3) {
+            $versionParts += "0"
+          }
+          
+          $versionStr = "$($versionParts[0]).$($versionParts[1]).$($versionParts[2])"
+          
+          # Create Inno Setup script
+          $issScript = @"
+          [Setup]
+          AppName=Browser Bookmarks Manager
+          AppVersion=$versionStr
+          AppPublisher=gloriouslegacy
+          AppPublisherURL=https://github.com/gloriouslegacy/BrowserBookmarks
+          DefaultDirName={autopf}\BrowserBookmarks
+          DefaultGroupName=Browser Bookmarks Manager
+          OutputDir=dist
+          OutputBaseFilename=BrowserBookmarks_Setup
+          Compression=lzma2
+          SolidCompression=yes
+          ArchitecturesInstallIn64BitMode=x64
+          SetupIconFile=icon\icon.ico
+          UninstallDisplayIcon={app}\BrowserBookmarks.exe
+          VersionInfoVersion=$versionStr
+          PrivilegesRequired=admin
+          
+          [Languages]
+          Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+          
+          [Files]
+          Source: "dist\BrowserBookmarks.exe"; DestDir: "{app}"; Flags: ignoreversion
+          Source: "dist\updater.exe"; DestDir: "{app}"; Flags: ignoreversion
+          Source: "language\*"; DestDir: "{app}\language"; Flags: ignoreversion recursesubdirs
+          
+          [Icons]
+          Name: "{group}\Browser Bookmarks Manager"; Filename: "{app}\BrowserBookmarks.exe"
+          Name: "{group}\Uninstall Browser Bookmarks Manager"; Filename: "{uninstallexe}"
+          Name: "{autodesktop}\Browser Bookmarks Manager"; Filename: "{app}\BrowserBookmarks.exe"; Tasks: desktopicon
+          
+          [Tasks]
+          Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"
+          
+          [Run]
+          Filename: "{app}\BrowserBookmarks.exe"; Description: "Launch Browser Bookmarks Manager"; Flags: nowait postinstall skipifsilent
+          "@
+          
+          $issScript | Out-File -FilePath "setup.iss" -Encoding UTF8
+          
+          # Run Inno Setup compiler
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          
+          & $iscc "setup.iss"
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "✗ Setup build failed"
+            exit 1
+          }
+          
+          if (Test-Path "dist/BrowserBookmarks_Setup.exe") {
+            $size = (Get-Item "dist/BrowserBookmarks_Setup.exe").Length
+            Write-Host "✓ Setup EXE created: $($size / 1MB) MB"
+          } else {
+            Write-Host "✗ Setup EXE not found"
+            exit 1
+          }
+
       # Generate file hashes
       - name: Generate File Hashes
         shell: pwsh
@@ -257,6 +350,9 @@ jobs:
           
           $portableHash = Get-FileHash -Path "dist/BrowserBookmarks.exe" -Algorithm SHA256
           Write-Host "Portable SHA256: $($portableHash.Hash)"
+          
+          $setupHash = Get-FileHash -Path "dist/BrowserBookmarks_Setup.exe" -Algorithm SHA256
+          Write-Host "Setup SHA256: $($setupHash.Hash)"
           
           $updaterHash = Get-FileHash -Path "dist/updater.exe" -Algorithm SHA256
           Write-Host "Updater SHA256: $($updaterHash.Hash)"
@@ -267,6 +363,10 @@ jobs:
           ### Portable Version
           - SHA256: ``$($portableHash.Hash)``
           - [VirusTotal Scan](https://www.virustotal.com/gui/file/$($portableHash.Hash))
+          
+          ### Setup Version
+          - SHA256: ``$($setupHash.Hash)``
+          - [VirusTotal Scan](https://www.virustotal.com/gui/file/$($setupHash.Hash))
           
           ### Updater
           - SHA256: ``$($updaterHash.Hash)``
@@ -340,11 +440,14 @@ jobs:
           Write-Host "=== Calculating SHA256 Hashes ==="
           
           $portableHash = (Get-FileHash -Path "BrowserBookmarks_Portable.zip" -Algorithm SHA256).Hash
+          $setupHash = (Get-FileHash -Path "dist/BrowserBookmarks_Setup.exe" -Algorithm SHA256).Hash
           
           Write-Host "Portable ZIP SHA256: $portableHash"
+          Write-Host "Setup EXE SHA256: $setupHash"
           
           # Save hashes to environment
           "PORTABLE_SHA256=$portableHash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SETUP_SHA256=$setupHash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           
       # Create GitHub Release
       - name: Create GitHub Release
@@ -364,6 +467,11 @@ jobs:
             ${{ env.PORTABLE_SHA256 }}
             ```
             
+            **Setup Installer (EXE)**
+            ```
+            ${{ env.SETUP_SHA256 }}
+            ```
+            
             ## 📝 Features
             
             - Edge, Chrome, Firefox 북마크 백업/복구
@@ -378,6 +486,7 @@ jobs:
 
           files: |
             BrowserBookmarks_Portable.zip
+            dist/BrowserBookmarks_Setup.exe
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
