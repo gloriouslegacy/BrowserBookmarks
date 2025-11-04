@@ -7,11 +7,27 @@ import zipfile
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
+import traceback
+
+# 로그 파일 설정
+LOG_FILE = os.path.join(os.environ.get('TEMP', '.'), 'updater_log.txt')
+
+def log(message):
+    """로그 기록"""
+    try:
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            f.write(f"[{timestamp}] {message}\n")
+    except:
+        pass
 
 class UpdaterGUI:
     def __init__(self, downloaded_file, target_file):
         self.downloaded_file = downloaded_file
         self.target_file = target_file
+        self.is_alive = True
+        
+        log(f"Updater 시작: {downloaded_file} -> {target_file}")
         
         self.root = tk.Tk()
         self.root.title("업데이트 중...")
@@ -44,39 +60,66 @@ class UpdaterGUI:
         self.update_thread.start()
         
         # GUI 실행
+        log("GUI mainloop 시작")
         self.root.mainloop()
+        log("GUI mainloop 종료")
     
     def update_status(self, status, detail=""):
         """GUI 상태 업데이트 (스레드 안전)"""
-        self.root.after(0, lambda: self._update_status_ui(status, detail))
+        log(f"상태 업데이트: {status} - {detail}")
+        if self.is_alive:
+            try:
+                self.root.after(0, lambda: self._update_status_ui(status, detail))
+            except:
+                log("GUI 업데이트 실패")
     
     def _update_status_ui(self, status, detail):
         """실제 UI 업데이트"""
-        self.status_label.config(text=status)
-        self.detail_label.config(text=detail)
+        try:
+            self.status_label.config(text=status)
+            self.detail_label.config(text=detail)
+        except:
+            pass
     
     def close_window(self):
         """창 닫기 (스레드 안전)"""
-        self.root.after(0, self.root.destroy)
+        log("창 닫기 시도")
+        self.is_alive = False
+        try:
+            self.root.after(0, self.root.destroy)
+        except:
+            pass
     
     def show_error(self, message):
         """에러 메시지 표시 (스레드 안전)"""
-        self.root.after(0, lambda: messagebox.showerror("업데이트 실패", message))
+        log(f"에러 표시: {message}")
+        if self.is_alive:
+            try:
+                self.root.after(0, lambda: messagebox.showerror("업데이트 실패", message))
+            except:
+                pass
     
     def perform_update(self):
         """업데이트 실행 (백그라운드 스레드)"""
         try:
+            log("업데이트 시작")
+            
             # 1. 프로그램 종료 대기
             self.update_status("프로그램 종료 대기 중...", "잠시만 기다려주세요...")
             for i in range(5):
                 time.sleep(1)
                 self.update_status("프로그램 종료 대기 중...", f"{i+1}/5초")
             
+            log("종료 대기 완료")
+            
             # 2. 파일 타입 확인 및 처리
             new_exe = None
             is_setup_installer = False
             
+            log(f"파일 타입 확인: {self.downloaded_file}")
+            
             if self.downloaded_file.lower().endswith('.zip'):
+                log("ZIP 파일 처리 시작")
                 # ZIP 파일 처리 (Portable)
                 self.update_status("ZIP 파일 압축 해제 중...", 
                                   os.path.basename(self.downloaded_file))
@@ -97,6 +140,7 @@ class UpdaterGUI:
                 
             elif self.downloaded_file.lower().endswith('_setup.exe'):
                 # Setup 인스톨러
+                log("Setup 인스톨러 감지")
                 is_setup_installer = True
                 
             elif self.downloaded_file.lower().endswith('.exe'):
@@ -104,30 +148,42 @@ class UpdaterGUI:
             else:
                 raise Exception(f"지원하지 않는 파일 형식: {self.downloaded_file}")
             
+            log(f"파일 타입 확인 완료. is_setup: {is_setup_installer}")
+            
             # 3. Setup 인스톨러 처리
             if is_setup_installer:
+                log("Setup 처리 시작")
                 self.update_status("Setup 인스톨러 실행 중...", "프로그램 종료 확인 중...")
                 
                 # BrowserBookmarks.exe 프로세스 강제 종료
                 target_name = os.path.basename(self.target_file)
-                try:
-                    # taskkill로 프로세스 강제 종료
-                    subprocess.run(['taskkill', '/F', '/IM', target_name], 
-                                 capture_output=True, timeout=5)
-                    self.update_status("프로그램 종료 완료", "")
-                    time.sleep(2)  # 프로세스 완전 종료 대기
-                except:
-                    pass  # 프로세스가 없거나 이미 종료된 경우
+                log(f"프로세스 종료 시도: {target_name}")
                 
+                try:
+                    result = subprocess.run(['taskkill', '/F', '/IM', target_name], 
+                                 capture_output=True, timeout=5, text=True)
+                    log(f"taskkill 결과: {result.returncode}, {result.stdout}")
+                    self.update_status("프로그램 종료 완료", "")
+                    time.sleep(2)
+                except Exception as e:
+                    log(f"taskkill 예외: {str(e)}")
+                
+                log("Setup 실행 시작")
                 self.update_status("Setup 실행 중...", "자동 설치가 진행됩니다...")
                 
-                # Setup 프로세스 시작
-                setup_process = subprocess.Popen([
-                    self.downloaded_file,
-                    '/VERYSILENT',
-                    '/SUPPRESSMSGBOXES',
-                    '/NORESTART'
-                ], shell=False)
+                try:
+                    # Setup 프로세스 시작
+                    log(f"Setup 명령: {self.downloaded_file}")
+                    setup_process = subprocess.Popen([
+                        self.downloaded_file,
+                        '/VERYSILENT',
+                        '/SUPPRESSMSGBOXES',
+                        '/NORESTART'
+                    ], shell=False)
+                    log(f"Setup 프로세스 시작됨. PID: {setup_process.pid}")
+                except Exception as e:
+                    log(f"Setup 실행 예외: {str(e)}\n{traceback.format_exc()}")
+                    raise
                 
                 # Setup 설치 대기 (고정 시간)
                 self.update_status("설치 중...", "설치가 진행 중입니다...")
