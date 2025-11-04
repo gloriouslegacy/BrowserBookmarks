@@ -253,18 +253,21 @@ jobs:
       - name: Install Inno Setup
         shell: pwsh
         run: |
-          Write-Host "=== Installing Inno Setup ==="
+          Write-Host "=== Installing Inno Setup via Chocolatey ==="
           
-          # Download Inno Setup
-          $innoUrl = "https://jrsoftware.org/download.php/is.exe"
-          $innoInstaller = "innosetup.exe"
+          # Install Inno Setup using Chocolatey (pre-installed on GitHub runners)
+          choco install innosetup -y
           
-          Invoke-WebRequest -Uri $innoUrl -OutFile $innoInstaller
+          # Refresh environment variables
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           
-          # Silent install
-          Start-Process -FilePath $innoInstaller -Args "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
-          
-          Write-Host "✓ Inno Setup installed"
+          # Verify installation
+          if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+            Write-Host "✓ Inno Setup installed successfully"
+          } else {
+            Write-Host "✗ Inno Setup installation failed"
+            exit 1
+          }
 
       # Build Setup version with Inno Setup
       - name: Build Setup Version
