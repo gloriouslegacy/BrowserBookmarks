@@ -183,13 +183,14 @@ jobs:
           
           $iconPath = "icon/icon.ico"
           
-          # Build updater as windowed app (no console)
+          # Build updater as windowed app 
           pyinstaller --onefile `
             --windowed `
             --name "updater" `
             --clean `
             --icon="$iconPath" `
             --version-file="version_info.txt" `
+            --add-data="icon;icon" `
             updater.py
           
           if ($LASTEXITCODE -ne 0) {
