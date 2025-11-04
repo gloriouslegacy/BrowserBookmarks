@@ -270,6 +270,8 @@ jobs:
             --icon="$iconPath" `
             --version-file="version_info.txt" `
             --distpath="dist_setup" `
+            --add-data="icon;icon" `
+            --add-data="language;language" `
             winBookmarks.py
           
           if ($LASTEXITCODE -ne 0) {

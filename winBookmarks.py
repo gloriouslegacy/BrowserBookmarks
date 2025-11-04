@@ -390,6 +390,7 @@ class UpdateManager:
             print(f"백업 실패: {e}")
             return None
     
+    
     def install_update(self, update_file, is_setup=False):
         """업데이트 설치
         - Setup: 인스톨러를 직접 실행 (자동 업데이트)
@@ -403,16 +404,19 @@ class UpdateManager:
                 # Setup 설치형: 인스톨러 직접 실행
                 log_message("[정보] Setup 인스톨러 실행 중...")
                 
-                # 인스톨러를 백그라운드에서 실행
+                # 인스톨러 실행 (설치 완료 후 자동 재시작)
                 subprocess.Popen([
                     update_file,
                     '/SILENT',           # 최소 UI로 설치
                     '/CLOSEAPPLICATIONS', # 실행 중인 앱 자동 종료
-                    '/RESTARTAPPLICATIONS', # 설치 후 앱 자동 실행
-                    '/NORESTART'         # 시스템 재시작 안함
+                    '/NORESTART',        # 시스템 재시작 안함
+                    f'/DIR={exe_dir}'    # 현재 설치 경로 유지
                 ], shell=False)
                 
-                log_message("[정보] Setup 인스톨러가 시작되었습니다.")
+                log_message("[정보] Setup 인스톨러가 시작되었습니다. 프로그램이 종료됩니다.")
+                
+                # 설치가 앱을 종료할 것이므로 프로그램 종료
+                # 인스톨러의 [Run] 섹션이 설치 후 자동으로 프로그램 시작
                 return True
                 
             else:
