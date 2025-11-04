@@ -104,9 +104,20 @@ class ConfigManager:
 class LanguageManager:
     def __init__(self, config_manager):
         self.config_manager = config_manager
-        # Portable 버전: 실행 파일과 같은 경로의 language 폴더 사용
+        
+        # Portable 버전: 실행 파일 옆 language 폴더 우선 사용
+        # Setup 버전: %APPDATA% 사용
         exe_dir = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else __file__)
-        self.lang_dir = os.path.join(exe_dir, "language")
+        portable_lang_dir = os.path.join(exe_dir, "language")
+        
+        # Portable language 폴더가 존재하고 쓰기 가능하면 사용
+        if os.path.exists(portable_lang_dir) and os.access(portable_lang_dir, os.W_OK):
+            self.lang_dir = portable_lang_dir
+        else:
+            # 없거나 쓰기 불가능하면 %APPDATA% 사용
+            app_folder = get_appdata_path()
+            self.lang_dir = os.path.join(app_folder, "language")
+        
         self.current_lang = config_manager.get("language", "ko")
         self.translations = {}
         self.load_language()

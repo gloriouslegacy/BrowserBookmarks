@@ -302,7 +302,8 @@ jobs:
           SetupIconFile=icon\icon.ico
           UninstallDisplayIcon={app}\BrowserBookmarks.exe
           VersionInfoVersion=$versionStr
-          PrivilegesRequired=admin
+          PrivilegesRequired=lowest
+          PrivilegesRequiredOverridesAllowed=dialog
           
           [Languages]
           Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
@@ -311,7 +312,6 @@ jobs:
           [Files]
           Source: "dist\BrowserBookmarks.exe"; DestDir: "{app}"; Flags: ignoreversion
           Source: "dist\updater.exe"; DestDir: "{app}"; Flags: ignoreversion
-          Source: "language\*"; DestDir: "{app}\language"; Flags: ignoreversion recursesubdirs
           
           [Icons]
           Name: "{group}\Browser Bookmarks Manager"; Filename: "{app}\BrowserBookmarks.exe"
