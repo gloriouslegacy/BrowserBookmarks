@@ -186,40 +186,56 @@ class UpdaterGUI:
                     raise
                 
                 # Setup 설치 대기 (고정 시간)
+                log("Setup 설치 대기 시작")
                 self.update_status("설치 중...", "설치가 진행 중입니다...")
                 
                 # 15초 대기 (일반적인 설치 시간)
                 for i in range(15):
                     time.sleep(1)
                     self.update_status("설치 중...", f"{i+1}/15초")
+                    log(f"설치 대기 {i+1}/15")
+                
+                log("설치 대기 완료")
                 
                 # 설치 완료 확인 (파일 존재 여부)
                 self.update_status("설치 확인 중...", "")
+                log("설치 확인 시작")
                 time.sleep(2)
                 
                 if not os.path.exists(self.target_file):
+                    log(f"대상 파일 없음: {self.target_file}")
                     # 파일이 없으면 조금 더 대기
                     self.update_status("설치 완료 대기 중...", "")
                     time.sleep(5)
+                else:
+                    log(f"대상 파일 확인: {self.target_file}")
                 
+                log("설치 완료 확인됨")
                 self.update_status("설치 완료", "프로그램을 시작합니다...")
                 time.sleep(1)
                 
                 # 프로그램 재시작
+                log("프로그램 재시작 시도")
                 self.update_status("프로그램 재시작 중...", "")
                 time.sleep(1)
                 
                 # 재시작 시도
                 target_dir = os.path.dirname(self.target_file)
+                log(f"재시작 명령: {self.target_file}, cwd: {target_dir}")
                 try:
-                    subprocess.Popen([self.target_file], shell=False, cwd=target_dir)
+                    proc = subprocess.Popen([self.target_file], shell=False, cwd=target_dir)
+                    log(f"재시작 프로세스 시작. PID: {proc.pid}")
                     self.update_status("업데이트 완료!", "프로그램이 시작됩니다.")
+                    log("업데이트 완료 메시지 표시")
                 except Exception as e:
+                    log(f"재시작 예외: {str(e)}\n{traceback.format_exc()}")
                     # 재시작 실패 시 사용자에게 알림
                     self.show_error(f"프로그램 재시작에 실패했습니다.\n수동으로 프로그램을 시작해주세요.\n\n오류: {str(e)}")
                 
                 time.sleep(2)
+                log("창 닫기 시도")
                 self.close_window()
+                log("Setup 처리 완료 - return")
                 return
             
             # 4. Portable 파일 교체
