@@ -183,9 +183,9 @@ jobs:
           
           $iconPath = "icon/icon.ico"
           
-          # Build updater as console app with version info
+          # Build updater as windowed app (no console)
           pyinstaller --onefile `
-            --console `
+            --windowed `
             --name "updater" `
             --clean `
             --icon="$iconPath" `
