@@ -106,35 +106,48 @@ class UpdaterGUI:
             
             # 3. Setup 인스톨러 처리
             if is_setup_installer:
-                self.update_status("Setup 인스톨러 실행 중...", "자동 설치가 진행됩니다...")
+                self.update_status("Setup 인스톨러 실행 중...", "프로그램 종료 확인 중...")
+                
+                # BrowserBookmarks.exe 프로세스 강제 종료
+                target_name = os.path.basename(self.target_file)
+                try:
+                    # taskkill로 프로세스 강제 종료
+                    subprocess.run(['taskkill', '/F', '/IM', target_name], 
+                                 capture_output=True, timeout=5)
+                    self.update_status("프로그램 종료 완료", "")
+                    time.sleep(2)  # 프로세스 완전 종료 대기
+                except:
+                    pass  # 프로세스가 없거나 이미 종료된 경우
+                
+                self.update_status("Setup 실행 중...", "자동 설치가 진행됩니다...")
                 
                 # Setup 프로세스 시작
                 setup_process = subprocess.Popen([
                     self.downloaded_file,
                     '/VERYSILENT',
                     '/SUPPRESSMSGBOXES',
-                    '/CLOSEAPPLICATIONS',
                     '/NORESTART'
                 ], shell=False)
                 
-                # Setup이 완료될 때까지 대기
+                # Setup 설치 대기 (고정 시간)
                 self.update_status("설치 중...", "설치가 진행 중입니다...")
                 
-                # 프로세스가 종료될 때까지 대기 (최대 60초)
-                for i in range(60):
-                    if setup_process.poll() is not None:
-                        # 설치 완료
-                        self.update_status("설치 완료", "프로그램을 시작합니다...")
-                        break
+                # 15초 대기 (일반적인 설치 시간)
+                for i in range(15):
                     time.sleep(1)
-                    if i < 30:
-                        self.update_status("설치 중...", f"{i+1}초 경과...")
-                else:
-                    # 타임아웃
-                    self.update_status("설치 대기 중...", "설치가 완료되기를 기다리는 중...")
+                    self.update_status("설치 중...", f"{i+1}/15초")
                 
-                # 추가 대기 (파일 정리 시간)
-                time.sleep(3)
+                # 설치 완료 확인 (파일 존재 여부)
+                self.update_status("설치 확인 중...", "")
+                time.sleep(2)
+                
+                if not os.path.exists(self.target_file):
+                    # 파일이 없으면 조금 더 대기
+                    self.update_status("설치 완료 대기 중...", "")
+                    time.sleep(5)
+                
+                self.update_status("설치 완료", "프로그램을 시작합니다...")
+                time.sleep(1)
                 
                 # 프로그램 재시작
                 self.update_status("프로그램 재시작 중...", "")
