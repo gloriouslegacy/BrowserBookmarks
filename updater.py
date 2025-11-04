@@ -100,9 +100,9 @@ class UpdaterGUI:
                 pass
     
     def perform_update(self):
-        """업데이트 실행 (백그라운드 스레드)"""
+        """업데이트 실행 (백그라운드 스레드) - Portable 버전만 처리"""
         try:
-            log("업데이트 시작")
+            log("업데이트 시작 (Portable 전용)")
             
             # 1. 프로그램 종료 대기
             self.update_status("프로그램 종료 대기 중...", "잠시만 기다려주세요...")
@@ -112,9 +112,8 @@ class UpdaterGUI:
             
             log("종료 대기 완료")
             
-            # 2. 파일 타입 확인 및 처리
+            # 2. 파일 타입 확인 및 처리 (Portable만)
             new_exe = None
-            is_setup_installer = False
             
             log(f"파일 타입 확인: {self.downloaded_file}")
             
@@ -137,120 +136,31 @@ class UpdaterGUI:
                     raise Exception("BrowserBookmarks.exe를 찾을 수 없습니다.")
                 
                 self.update_status("압축 해제 완료", "")
-                
-            elif self.downloaded_file.lower().endswith('_setup.exe'):
-                # Setup 인스톨러
-                log("Setup 인스톨러 감지")
-                is_setup_installer = True
+                log("ZIP 압축 해제 완료")
                 
             elif self.downloaded_file.lower().endswith('.exe'):
+                log("단일 EXE 파일 처리")
                 new_exe = self.downloaded_file
             else:
                 raise Exception(f"지원하지 않는 파일 형식: {self.downloaded_file}")
             
-            log(f"파일 타입 확인 완료. is_setup: {is_setup_installer}")
+            log(f"파일 타입 확인 완료. new_exe: {new_exe}")
             
-            # 3. Setup 인스톨러 처리
-            if is_setup_installer:
-                log("Setup 처리 시작")
-                self.update_status("Setup 인스톨러 실행 중...", "프로그램 종료 확인 중...")
-                
-                # BrowserBookmarks.exe 프로세스 강제 종료
-                target_name = os.path.basename(self.target_file)
-                log(f"프로세스 종료 시도: {target_name}")
-                
-                try:
-                    result = subprocess.run(['taskkill', '/F', '/IM', target_name], 
-                                 capture_output=True, timeout=5, text=True)
-                    log(f"taskkill 결과: {result.returncode}, {result.stdout}")
-                    self.update_status("프로그램 종료 완료", "")
-                    time.sleep(2)
-                except Exception as e:
-                    log(f"taskkill 예외: {str(e)}")
-                
-                log("Setup 실행 시작")
-                self.update_status("Setup 실행 중...", "자동 설치가 진행됩니다...")
-                
-                try:
-                    # Setup 프로세스 시작
-                    log(f"Setup 명령: {self.downloaded_file}")
-                    setup_process = subprocess.Popen([
-                        self.downloaded_file,
-                        '/VERYSILENT',
-                        '/SUPPRESSMSGBOXES',
-                        '/NORESTART'
-                    ], shell=False)
-                    log(f"Setup 프로세스 시작됨. PID: {setup_process.pid}")
-                except Exception as e:
-                    log(f"Setup 실행 예외: {str(e)}\n{traceback.format_exc()}")
-                    raise
-                
-                # Setup 설치 대기 (고정 시간)
-                log("Setup 설치 대기 시작")
-                self.update_status("설치 중...", "설치가 진행 중입니다...")
-                
-                # 15초 대기 (일반적인 설치 시간)
-                for i in range(15):
-                    time.sleep(1)
-                    self.update_status("설치 중...", f"{i+1}/15초")
-                    log(f"설치 대기 {i+1}/15")
-                
-                log("설치 대기 완료")
-                
-                # 설치 완료 확인 (파일 존재 여부)
-                self.update_status("설치 확인 중...", "")
-                log("설치 확인 시작")
-                time.sleep(2)
-                
-                if not os.path.exists(self.target_file):
-                    log(f"대상 파일 없음: {self.target_file}")
-                    # 파일이 없으면 조금 더 대기
-                    self.update_status("설치 완료 대기 중...", "")
-                    time.sleep(5)
-                else:
-                    log(f"대상 파일 확인: {self.target_file}")
-                
-                log("설치 완료 확인됨")
-                self.update_status("설치 완료", "프로그램을 시작합니다...")
-                time.sleep(1)
-                
-                # 프로그램 재시작
-                log("프로그램 재시작 시도")
-                self.update_status("프로그램 재시작 중...", "")
-                time.sleep(1)
-                
-                # 재시작 시도
-                target_dir = os.path.dirname(self.target_file)
-                log(f"재시작 명령: {self.target_file}, cwd: {target_dir}")
-                try:
-                    proc = subprocess.Popen([self.target_file], shell=False, cwd=target_dir)
-                    log(f"재시작 프로세스 시작. PID: {proc.pid}")
-                    self.update_status("업데이트 완료!", "프로그램이 시작됩니다.")
-                    log("업데이트 완료 메시지 표시")
-                except Exception as e:
-                    log(f"재시작 예외: {str(e)}\n{traceback.format_exc()}")
-                    # 재시작 실패 시 사용자에게 알림
-                    self.show_error(f"프로그램 재시작에 실패했습니다.\n수동으로 프로그램을 시작해주세요.\n\n오류: {str(e)}")
-                
-                time.sleep(2)
-                log("창 닫기 시도")
-                self.close_window()
-                log("Setup 처리 완료 - return")
-                return
-            
-            # 4. Portable 파일 교체
+            # 3. Portable 파일 교체
             backup_file = f"{self.target_file}.backup"
             
             # 백업
             self.update_status("기존 파일 백업 중...", "")
             if os.path.exists(self.target_file):
                 shutil.copy2(self.target_file, backup_file)
+                log("백업 완료")
             
             # 파일 교체
             self.update_status("파일 업데이트 중...", "")
             if os.path.exists(self.target_file):
                 os.remove(self.target_file)
             shutil.copy2(new_exe, self.target_file)
+            log("파일 교체 완료")
             
             # 임시 파일 정리
             self.update_status("임시 파일 정리 중...", "")
@@ -259,6 +169,7 @@ class UpdaterGUI:
                     os.remove(self.downloaded_file)
                 if os.path.exists(extract_dir):
                     shutil.rmtree(extract_dir)
+            log("임시 파일 정리 완료")
             
             # 재시작 준비
             self.update_status("프로그램 재시작 준비 중...", "")
@@ -268,24 +179,29 @@ class UpdaterGUI:
             self.update_status("프로그램 재시작 중...", "")
             target_dir = os.path.dirname(self.target_file)
             subprocess.Popen([self.target_file], shell=False, cwd=target_dir)
+            log("프로그램 재시작 완료")
             
             self.update_status("업데이트 완료!", "프로그램이 시작됩니다.")
             time.sleep(2)
             self.close_window()
+            log("업데이트 프로세스 완료")
             
         except Exception as e:
             # 에러 처리
+            log(f"업데이트 실패: {str(e)}\n{traceback.format_exc()}")
             self.show_error(f"업데이트 중 오류가 발생했습니다:\n\n{str(e)}")
             
             # 롤백 시도
             if 'backup_file' in locals() and os.path.exists(backup_file):
                 try:
+                    log("롤백 시도")
                     if os.path.exists(self.target_file):
                         os.remove(self.target_file)
                     shutil.copy2(backup_file, self.target_file)
                     subprocess.Popen([self.target_file], shell=False)
-                except:
-                    pass
+                    log("롤백 완료")
+                except Exception as rollback_e:
+                    log(f"롤백 실패: {str(rollback_e)}")
             
             time.sleep(3)
             self.close_window()
@@ -300,8 +216,14 @@ def main():
     downloaded_file = sys.argv[1]
     target_file = sys.argv[2]
     
+    log(f"=== Updater 시작 ===")
+    log(f"Downloaded: {downloaded_file}")
+    log(f"Target: {target_file}")
+    
     # GUI 시작
     UpdaterGUI(downloaded_file, target_file)
+    
+    log("=== Updater 종료 ===")
 
 if __name__ == "__main__":
     main()

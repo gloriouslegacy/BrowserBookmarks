@@ -391,26 +391,47 @@ class UpdateManager:
             return None
     
     def install_update(self, update_file, is_setup=False):
-        """업데이트 설치"""
+        """업데이트 설치
+        - Setup: 인스톨러를 직접 실행 (자동 업데이트)
+        - Portable: updater.exe를 통해 파일 교체
+        """
         try:
             exe_path = sys.executable if getattr(sys, 'frozen', False) else __file__
             exe_dir = os.path.dirname(exe_path)
-            updater_path = os.path.join(exe_dir, "updater.exe")
             
-            if not os.path.exists(updater_path):
-                raise Exception("updater.exe를 찾을 수 없습니다.")
-            
-            # updater.exe 실행
-            # Setup: updater.exe <Setup.exe> <현재실행파일>
-            # Portable: updater.exe <ZIP> <현재실행파일>
-            subprocess.Popen([updater_path, update_file, exe_path], shell=False)
-            return True
+            if is_setup:
+                # Setup 설치형: 인스톨러 직접 실행
+                log_message("[정보] Setup 인스톨러 실행 중...")
+                
+                # 인스톨러를 백그라운드에서 실행
+                subprocess.Popen([
+                    update_file,
+                    '/SILENT',           # 최소 UI로 설치
+                    '/CLOSEAPPLICATIONS', # 실행 중인 앱 자동 종료
+                    '/RESTARTAPPLICATIONS', # 설치 후 앱 자동 실행
+                    '/NORESTART'         # 시스템 재시작 안함
+                ], shell=False)
+                
+                log_message("[정보] Setup 인스톨러가 시작되었습니다.")
+                return True
+                
+            else:
+                # Portable: updater.exe 사용
+                updater_path = os.path.join(exe_dir, "updater.exe")
+                
+                if not os.path.exists(updater_path):
+                    raise Exception("updater.exe를 찾을 수 없습니다.")
+                
+                log_message("[정보] Portable 업데이트 시작...")
+                # updater.exe 실행: updater.exe <ZIP파일> <현재실행파일>
+                subprocess.Popen([updater_path, update_file, exe_path], shell=False)
+                return True
                 
         except Exception as e:
             print(f"설치 실패: {e}")
             messagebox.showerror("오류", f"업데이트 설치 실패:\n{str(e)}")
             return False
-            return False
+
 
 # 브라우저별 북마크 경로 정의 
 def get_browser_paths():

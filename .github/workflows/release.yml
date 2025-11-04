@@ -350,7 +350,6 @@ jobs:
           
           [Files]
           Source: "dist_setup\BrowserBookmarks\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-          Source: "dist\updater.exe"; DestDir: "{app}"; Flags: ignoreversion
           
           [Icons]
           Name: "{group}\Browser Bookmarks Manager"; Filename: "{app}\BrowserBookmarks.exe"
@@ -450,7 +449,7 @@ jobs:
           
           Files included:
           - BrowserBookmarks.exe (main program)
-          - updater.exe (automatic update helper)
+          - updater.exe (automatic update helper - for portable version only)
           - language/ folder (language files)
           - README.txt (this file)
           
@@ -464,6 +463,8 @@ jobs:
           - To switch language: File → Change Language → English
           
           Settings are saved in: %APPDATA%\BrowserBookmarks\app_config.json
+          
+          Note: Setup installer version does not need updater.exe as it has built-in update system.
           "@ | Out-File -FilePath "release/README.txt" -Encoding UTF8
           
           Compress-Archive -Path "release/*" -DestinationPath "BrowserBookmarks_Portable.zip" -Force
