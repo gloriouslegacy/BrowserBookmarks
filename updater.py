@@ -24,8 +24,12 @@ def main():
     print(f"대상 파일: {target_file}")
     print("\n프로그램 종료 대기 중...")
     
-    # 메인 프로그램이 종료될 때까지 대기
-    time.sleep(3)
+    # 메인 프로그램이 종료될 때까지 충분히 대기
+    for i in range(5):
+        time.sleep(1)
+        print(f"대기 중... ({i+1}/5초)")
+    
+    print("✓ 대기 완료")
     
     # 백업 생성
     backup_file = f"{target_file}.backup"

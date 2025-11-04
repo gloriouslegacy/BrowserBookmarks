@@ -292,7 +292,7 @@ jobs:
           AppVersion=$versionStr
           AppPublisher=gloriouslegacy
           AppPublisherURL=https://github.com/gloriouslegacy/BrowserBookmarks
-          DefaultDirName={autopf}\BrowserBookmarks
+          DefaultDirName={localappdata}\Programs\BrowserBookmarks
           DefaultGroupName=Browser Bookmarks Manager
           OutputDir=dist
           OutputBaseFilename=BrowserBookmarks_Setup
@@ -304,6 +304,8 @@ jobs:
           VersionInfoVersion=$versionStr
           PrivilegesRequired=lowest
           PrivilegesRequiredOverridesAllowed=dialog
+          UsePreviousAppDir=yes
+          DirExistsWarning=no
           
           [Languages]
           Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"

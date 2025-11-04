@@ -311,11 +311,24 @@ class UpdateManager:
                         'body': data.get('body', '')
                     }
                     
-                    # 다운로드 URL 찾기
+                    # 다운로드 URL 찾기 - Setup 또는 Portable
+                    # Setup 버전이 설치되어 있으면 Setup 다운로드, 아니면 Portable
+                    is_setup_installed = self._is_setup_installed()
+                    
                     for asset in data.get('assets', []):
-                        if asset['name'].endswith('.exe') and 'portable' not in asset['name'].lower():
-                            version_info['download_url'] = asset['browser_download_url']
-                            break
+                        name = asset['name'].lower()
+                        if is_setup_installed:
+                            # Setup 버전 찾기
+                            if name.endswith('_setup.exe'):
+                                version_info['download_url'] = asset['browser_download_url']
+                                version_info['is_setup'] = True
+                                break
+                        else:
+                            # Portable 버전 찾기 (ZIP)
+                            if 'portable' in name and name.endswith('.zip'):
+                                version_info['download_url'] = asset['browser_download_url']
+                                version_info['is_setup'] = False
+                                break
                     
                     if callback:
                         callback(True, version_info)
@@ -335,6 +348,16 @@ class UpdateManager:
             return remote > current
         except:
             return False
+    
+    def _is_setup_installed(self):
+        """Setup 버전으로 설치되었는지 확인"""
+        exe_path = sys.executable if getattr(sys, 'frozen', False) else __file__
+        exe_dir = os.path.dirname(exe_path)
+        
+        # unins000.exe가 있으면 Setup 버전 (Inno Setup uninstaller)
+        # 설치 경로와 무관하게 uninstaller 존재 여부로 판단
+        uninstaller = os.path.join(exe_dir, "unins000.exe")
+        return os.path.exists(uninstaller)
     
     def download_update(self, download_url, progress_callback=None):
         """업데이트 다운로드"""
@@ -368,20 +391,50 @@ class UpdateManager:
             print(f"백업 실패: {e}")
             return None
     
-    def install_update(self, update_file):
-        """업데이트 설치 - updater.exe 사용"""
+    def install_update(self, update_file, is_setup=False):
+        """업데이트 설치"""
         try:
             exe_path = sys.executable if getattr(sys, 'frozen', False) else __file__
-            exe_dir = os.path.dirname(exe_path)
-            updater_path = os.path.join(exe_dir, "updater.exe")
             
-            if not os.path.exists(updater_path):
-                messagebox.showerror("오류", "updater.exe를 찾을 수 없습니다.")
-                return False
-            
-            # updater.exe 실행 (새 파일 경로, 현재 실행 파일 경로 전달)
-            subprocess.Popen([updater_path, update_file, exe_path], shell=False)
-            return True
+            if is_setup:
+                # Setup 파일 자동 설치 (Very Silent)
+                subprocess.Popen([update_file, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'], shell=False)
+                return True
+            else:
+                # Portable: updater.exe 사용
+                exe_dir = os.path.dirname(exe_path)
+                updater_path = os.path.join(exe_dir, "updater.exe")
+                
+                if not os.path.exists(updater_path):
+                    # ZIP 파일에서 직접 추출 필요
+                    import zipfile
+                    temp_dir = os.path.join(get_appdata_path(), "update_extract")
+                    os.makedirs(temp_dir, exist_ok=True)
+                    
+                    with zipfile.ZipFile(update_file, 'r') as zip_ref:
+                        zip_ref.extractall(temp_dir)
+                    
+                    # 추출된 파일 찾기
+                    new_exe = os.path.join(temp_dir, "BrowserBookmarks.exe")
+                    new_updater = os.path.join(temp_dir, "updater.exe")
+                    
+                    if os.path.exists(new_updater):
+                        updater_path = new_updater
+                
+                if not os.path.exists(updater_path):
+                    messagebox.showerror("오류", "updater.exe를 찾을 수 없습니다.")
+                    return False
+                
+                # Portable ZIP에서 추출된 새 EXE 경로
+                if update_file.endswith('.zip'):
+                    temp_dir = os.path.join(get_appdata_path(), "update_extract")
+                    new_exe_file = os.path.join(temp_dir, "BrowserBookmarks.exe")
+                else:
+                    new_exe_file = update_file
+                
+                # updater.exe 실행
+                subprocess.Popen([updater_path, new_exe_file, exe_path], shell=False)
+                return True
         except Exception as e:
             print(f"설치 실패: {e}")
             return False
@@ -885,23 +938,26 @@ class BookmarkManagerGUI:
             try:
                 # 다운로드
                 download_url = version_info.get('download_url')
+                is_setup = version_info.get('is_setup', False)
                 update_file = self.update_manager.download_update(download_url, update_progress)
                 
                 if not update_file:
                     raise Exception(self.lang_manager.get("update", "download_failed"))
                 
-                # 백업 생성
-                self.update_manager.create_backup()
+                # 백업 생성 (Portable만)
+                if not is_setup:
+                    self.update_manager.create_backup()
                 
                 # 설치
                 progress_window.destroy()
                 
-                if self.update_manager.install_update(update_file):
+                if self.update_manager.install_update(update_file, is_setup):
                     messagebox.showinfo(
                         self.lang_manager.get("update", "title"),
                         self.lang_manager.get("update", "complete")
                     )
-                    self.master.quit()
+                    # 프로그램 강제 종료
+                    self.master.after(100, lambda: os._exit(0))
                 else:
                     raise Exception(self.lang_manager.get("update", "install_failed"))
                     
