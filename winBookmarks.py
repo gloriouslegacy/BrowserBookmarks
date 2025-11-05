@@ -28,12 +28,142 @@ TEXT_COLOR = "#333333"
 BUTTON_FG = "#ffffff"
 
 # 다크모드 색상 
-DARK_BG_COLOR = "#0d0d0d"
-DARK_TEXT_COLOR = "#d0d0d0"
-DARK_FRAME_BG = "#0d0d0d"
-DARK_ENTRY_BG = "#000000"
-DARK_PRIMARY_COLOR = "#1a3a52"
-DARK_SECONDARY_COLOR = "#5a1a1a"
+DARK_BG_COLOR = "#1e1e1e"
+DARK_TEXT_COLOR = "#e0e0e0"
+DARK_FRAME_BG = "#2d2d2d"
+DARK_ENTRY_BG = "#0d0d0d"
+DARK_PRIMARY_COLOR = "#2d5a7b"
+DARK_SECONDARY_COLOR = "#7b2d2d"
+
+# 커스텀 메시지 다이얼로그
+class CustomMessageBox:
+    """다크모드를 지원하는 커스텀 메시지박스"""
+    
+    @staticmethod
+    def show(parent, title, message, dialog_type="info", dark_mode=False):
+        """
+        커스텀 메시지 다이얼로그 표시
+        dialog_type: "info", "warning", "error", "yesno"
+        """
+        dialog = tk.Toplevel(parent)
+        dialog.title(title)
+        dialog.resizable(False, False)
+        dialog.transient(parent)
+        dialog.grab_set()
+        
+        # parent 윈도우의 아이콘 복사
+        try:
+            if hasattr(parent, '_icon_path') and parent._icon_path:
+                dialog.iconbitmap(parent._icon_path)
+        except:
+            pass
+        
+        # 색상 설정
+        if dark_mode:
+            bg = DARK_FRAME_BG
+            fg = DARK_TEXT_COLOR
+            btn_bg = DARK_PRIMARY_COLOR
+            btn_fg = DARK_TEXT_COLOR
+        else:
+            bg = "#ffffff"
+            fg = TEXT_COLOR
+            btn_bg = PRIMARY_COLOR
+            btn_fg = BUTTON_FG
+        
+        dialog.configure(bg=bg)
+        
+        # 아이콘 매핑
+        icon_map = {
+            "info": "ℹ️",
+            "warning": "⚠️",
+            "error": "❌",
+            "yesno": "❓"
+        }
+        icon_text = icon_map.get(dialog_type, "ℹ️")
+        
+        # 콘텐츠 프레임
+        content_frame = tk.Frame(dialog, bg=bg)
+        content_frame.pack(padx=20, pady=20, fill="both", expand=True)
+        
+        # 아이콘 레이블
+        icon_label = tk.Label(content_frame, text=icon_text, bg=bg, fg=fg,
+                             font=('Segoe UI Emoji', 24))
+        icon_label.pack(side="left", padx=(0, 15))
+        
+        # 메시지 프레임
+        msg_frame = tk.Frame(content_frame, bg=bg)
+        msg_frame.pack(side="left", fill="both", expand=True)
+        
+        # 메시지 텍스트
+        msg_label = tk.Label(msg_frame, text=message, bg=bg, fg=fg,
+                            font=('Malgun Gothic', 10), justify="left",
+                            wraplength=350)
+        msg_label.pack()
+        
+        # 버튼 프레임
+        btn_frame = tk.Frame(dialog, bg=bg)
+        btn_frame.pack(pady=(0, 20))
+        
+        result = [False]  # 결과를 저장할 리스트
+        
+        def on_yes():
+            result[0] = True
+            dialog.destroy()
+        
+        def on_no():
+            result[0] = False
+            dialog.destroy()
+        
+        # 버튼 생성
+        if dialog_type == "yesno":
+            yes_btn = tk.Button(btn_frame, text="예", command=on_yes,
+                               bg=btn_bg, fg=btn_fg, width=10,
+                               font=('Malgun Gothic', 9), relief='flat',
+                               cursor="hand2")
+            yes_btn.pack(side="left", padx=5)
+            
+            no_btn = tk.Button(btn_frame, text="아니오", command=on_no,
+                              bg=DARK_SECONDARY_COLOR if dark_mode else SECONDARY_COLOR,
+                              fg=btn_fg, width=10,
+                              font=('Malgun Gothic', 9), relief='flat',
+                              cursor="hand2")
+            no_btn.pack(side="left", padx=5)
+        else:
+            ok_btn = tk.Button(btn_frame, text="확인", command=on_yes,
+                              bg=btn_bg, fg=btn_fg, width=10,
+                              font=('Malgun Gothic', 9), relief='flat',
+                              cursor="hand2")
+            ok_btn.pack()
+        
+        # 창 크기 조정
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = parent.winfo_x() + (parent.winfo_width() // 2) - (width // 2)
+        y = parent.winfo_y() + (parent.winfo_height() // 2) - (height // 2)
+        dialog.geometry(f"+{x}+{y}")
+        
+        # 모달 대화상자로 실행
+        parent.wait_window(dialog)
+        
+        return result[0]
+    
+    @staticmethod
+    def showinfo(parent, title, message, dark_mode=False):
+        return CustomMessageBox.show(parent, title, message, "info", dark_mode)
+    
+    @staticmethod
+    def showwarning(parent, title, message, dark_mode=False):
+        return CustomMessageBox.show(parent, title, message, "warning", dark_mode)
+    
+    @staticmethod
+    def showerror(parent, title, message, dark_mode=False):
+        return CustomMessageBox.show(parent, title, message, "error", dark_mode)
+    
+    @staticmethod
+    def askyesno(parent, title, message, dark_mode=False):
+        return CustomMessageBox.show(parent, title, message, "yesno", dark_mode)
+
 
 def resource_path(relative_path):
     """
@@ -493,11 +623,16 @@ def perform_backup(browser_name, backup_dir):
     if not src_path or not os.path.exists(src_path):
         display_path = src_path if src_path else "자동 감지 실패"
         log_message(f"[오류] {browser_name} 북마크 파일을 찾을 수 없습니다.")
-        messagebox.showerror("오류", f"{browser_name} 북마크 파일을 찾을 수 없습니다.\n경로 확인:\n{display_path}")
+        if gui_instance:
+            CustomMessageBox.showerror(gui_instance.master, "오류", 
+                f"{browser_name} 북마크 파일을 찾을 수 없습니다.\n경로 확인:\n{display_path}",
+                gui_instance.dark_mode)
         return False
 
     if not backup_dir:
-        messagebox.showwarning("경고", "백업 폴더를 선택해주세요.")
+        if gui_instance:
+            CustomMessageBox.showwarning(gui_instance.master, "경고", "백업 폴더를 선택해주세요.", 
+                gui_instance.dark_mode)
         return False
 
     os.makedirs(backup_dir, exist_ok=True)
@@ -509,7 +644,10 @@ def perform_backup(browser_name, backup_dir):
         return True
     except Exception as e:
         log_message(f"[오류] {browser_name} 백업 실패: {e}")
-        messagebox.showerror("오류", f"{browser_name} 백업 중 오류 발생: {e}")
+        if gui_instance:
+            CustomMessageBox.showerror(gui_instance.master, "오류", 
+                f"{browser_name} 백업 중 오류 발생: {e}",
+                gui_instance.dark_mode)
         return False
 
 def perform_restore(browser_name, restore_dir):
@@ -520,12 +658,18 @@ def perform_restore(browser_name, restore_dir):
     browser_exe = BROWSER_EXE_MAP.get(browser_name)
 
     if not os.path.exists(src_path):
-        messagebox.showerror("오류", f"복구 파일이 백업 폴더에 없습니다.\n필요한 파일: {backup_filename}")
+        if gui_instance:
+            CustomMessageBox.showerror(gui_instance.master, "오류", 
+                f"복구 파일이 백업 폴더에 없습니다.\n필요한 파일: {backup_filename}",
+                gui_instance.dark_mode)
         return False
 
     if not dst_path or not os.path.exists(os.path.dirname(dst_path)):
          log_message(f"[오류] {browser_name} 복구 대상 경로를 찾을 수 없습니다.")
-         messagebox.showerror("오류", f"{browser_name} 복구 대상 경로를 찾을 수 없습니다.\n브라우저를 한 번 실행해 보세요.")
+         if gui_instance:
+             CustomMessageBox.showerror(gui_instance.master, "오류", 
+                 f"{browser_name} 복구 대상 경로를 찾을 수 없습니다.\n브라우저를 한 번 실행해 보세요.",
+                 gui_instance.dark_mode)
          return False
     
     
@@ -540,7 +684,10 @@ def perform_restore(browser_name, restore_dir):
         log_message(f"[정보] {browser_name} 프로세스가 실행 중이 아니거나 이미 종료되었습니다.")
     except Exception as e:
         log_message(f"[오류] 프로세스 종료 중 예외 발생: {e}")
-        messagebox.showwarning("경고", "브라우저 프로세스 종료에 실패했습니다. 수동으로 종료해 주세요.")
+        if gui_instance:
+            CustomMessageBox.showwarning(gui_instance.master, "경고", 
+                "브라우저 프로세스 종료에 실패했습니다. 수동으로 종료해 주세요.",
+                gui_instance.dark_mode)
         
     
     # 복구 실행
@@ -558,7 +705,10 @@ def perform_restore(browser_name, restore_dir):
         
     except Exception as e:
         log_message(f"[오류] {browser_name} 복구 실패: {e}")
-        messagebox.showerror("오류", f"{browser_name} 복구 중 오류 발생: {e}")
+        if gui_instance:
+            CustomMessageBox.showerror(gui_instance.master, "오류", 
+                f"{browser_name} 복구 중 오류 발생: {e}",
+                gui_instance.dark_mode)
         
     # 복구 후 프로세스 재실행 로직
     if restore_success and browser_exe:
@@ -568,7 +718,10 @@ def perform_restore(browser_name, restore_dir):
             log_message(f"[성공] {browser_name} 재실행 완료.")
         except Exception as e:
             log_message(f"[오류] 브라우저 재실행 실패: {e}")
-            messagebox.showwarning("경고", "브라우저 재실행에 실패했습니다. 수동으로 시작해 주세요.")
+            if gui_instance:
+                CustomMessageBox.showwarning(gui_instance.master, "경고", 
+                    "브라우저 재실행에 실패했습니다. 수동으로 시작해 주세요.",
+                    gui_instance.dark_mode)
             
     return restore_success
 
@@ -594,10 +747,13 @@ class BookmarkManagerGUI:
         master.title(self.lang_manager.get("app", "title"))
         
         # 아이콘 설정
+        self.icon_path = None
         try:
             icon_path = resource_path(os.path.join('icon', 'icon.ico'))
             if os.path.exists(icon_path):
                 master.iconbitmap(icon_path)
+                self.icon_path = icon_path
+                master._icon_path = icon_path  # parent에도 저장
         except Exception:
             pass 
 
@@ -657,9 +813,11 @@ class BookmarkManagerGUI:
         style.theme_use('clam')
         
         # 1. 설정 섹션
-        settings_frame = ttk.LabelFrame(self.master, 
-                                        text=self.lang_manager.get("main", "settings"), 
-                                        padding="10 10 10 10")
+        settings_frame = tk.LabelFrame(self.master, 
+                                        text=self.lang_manager.get("main", "settings"),
+                                        bg=BG_COLOR, fg=TEXT_COLOR,
+                                        font=('Malgun Gothic', 9),
+                                        padx=10, pady=10)
         settings_frame.pack(padx=10, pady=10, fill="x")
         self.widgets['settings_frame'] = settings_frame
 
@@ -719,9 +877,11 @@ class BookmarkManagerGUI:
         self.widgets['restore_btn'] = self.restore_btn
         
         # 3. 로그 섹션
-        log_frame = ttk.LabelFrame(self.master, 
-                                   text=self.lang_manager.get("main", "log_title"), 
-                                   padding="10 10 10 10")
+        log_frame = tk.LabelFrame(self.master, 
+                                   text=self.lang_manager.get("main", "log_title"),
+                                   bg=BG_COLOR, fg=TEXT_COLOR,
+                                   font=('Malgun Gothic', 9),
+                                   padx=10, pady=10)
         log_frame.pack(padx=10, pady=10, fill="both", expand=True)
         self.widgets['log_frame'] = log_frame
 
@@ -766,8 +926,9 @@ class BookmarkManagerGUI:
         style = ttk.Style(self.master)
         style.theme_use('clam')  # clam 테마 사용
         
-        # LabelFrame 스타일
-        style.configure('TLabelFrame', background=frame_bg, foreground=fg, borderwidth=0, relief='flat')
+        # LabelFrame 스타일 - 모든 배경색 통일
+        style.configure('TLabelFrame', background=frame_bg, foreground=fg, borderwidth=1, 
+                       relief='solid', bordercolor=frame_bg if self.dark_mode else '#cccccc')
         style.configure('TLabelFrame.Label', background=frame_bg, foreground=fg, font=('Malgun Gothic', 9))
         
         # Frame 스타일
@@ -777,25 +938,32 @@ class BookmarkManagerGUI:
         style.configure('TLabel', background=frame_bg, foreground=fg, font=('Malgun Gothic', 9))
         
         # Entry 스타일
-        style.configure('TEntry', fieldbackground=entry_bg, foreground=fg, borderwidth=0)
+        style.configure('TEntry', fieldbackground=entry_bg, foreground=fg, borderwidth=1,
+                       bordercolor=entry_bg if self.dark_mode else '#cccccc')
         style.map('TEntry', fieldbackground=[('readonly', entry_bg), ('disabled', entry_bg)])
         
-        # Button 스타일 (ttk)
-        style.configure('TButton', background=text_bg, foreground=fg, borderwidth=0, font=('Malgun Gothic', 9), relief='flat')
+        # Button 스타일 (ttk) - 배경색 frame_bg로 변경
+        style.configure('TButton', background=frame_bg, foreground=fg, borderwidth=1, 
+                       font=('Malgun Gothic', 9), relief='flat',
+                       bordercolor=frame_bg if self.dark_mode else '#cccccc')
         style.map('TButton', 
-                  background=[('active', text_bg), ('pressed', text_bg)],
+                  background=[('active', frame_bg), ('pressed', frame_bg)],
                   foreground=[('active', fg)])
         
         # OptionMenu (Combobox) 스타일
-        style.configure('TMenubutton', background=entry_bg, foreground=fg, borderwidth=0, relief='flat')
+        style.configure('TMenubutton', background=entry_bg, foreground=fg, borderwidth=1, relief='flat',
+                       bordercolor=entry_bg if self.dark_mode else '#cccccc',
+                       arrowcolor=fg)  # 화살표 색상 추가
         style.map('TMenubutton',
-                  background=[('active', entry_bg), ('pressed', entry_bg)])
+                  background=[('active', entry_bg), ('pressed', entry_bg)],
+                  arrowcolor=[('active', fg), ('pressed', fg)])  # 화살표 색상 맵 추가
         
         # 개별 위젯 배경색 적용
         for widget_name, widget in self.widgets.items():
             try:
-                if isinstance(widget, (ttk.LabelFrame, ttk.Frame, ttk.Label, ttk.Button)):
-                    pass
+                if isinstance(widget, tk.LabelFrame):
+                    # tk.LabelFrame 배경색 직접 설정
+                    widget.configure(bg=frame_bg, fg=fg)
                 elif isinstance(widget, ttk.Entry):
                     widget.configure(style='TEntry')
             except:
@@ -848,7 +1016,7 @@ class BookmarkManagerGUI:
             sync_detail=sync_detail
         )
         
-        must_proceed = messagebox.askyesno(pre_sync_title, pre_sync_message, icon='warning')
+        must_proceed = CustomMessageBox.askyesno(self.master, pre_sync_title, pre_sync_message, self.dark_mode)
         
         if must_proceed:
             perform_restore(browser, dir_path)
@@ -862,9 +1030,11 @@ class BookmarkManagerGUI:
     def _change_language(self, lang_code):
         """언어 변경"""
         self.lang_manager.change_language(lang_code)
-        messagebox.showinfo(
+        CustomMessageBox.showinfo(
+            self.master,
             self.lang_manager.get("messages", "info"),
-            "Language changed. Please restart the application." if lang_code == "en" else "언어가 변경되었습니다. 프로그램을 재시작해주세요."
+            "Language changed. Please restart the application." if lang_code == "en" else "언어가 변경되었습니다. 프로그램을 재시작해주세요.",
+            self.dark_mode
         )
     
     def _toggle_dark_mode(self):
@@ -889,9 +1059,11 @@ class BookmarkManagerGUI:
         if has_update:
             self._show_update_dialog(version_info)
         else:
-            messagebox.showinfo(
+            CustomMessageBox.showinfo(
+                self.master,
                 self.lang_manager.get("update", "title"),
-                self.lang_manager.get("update", "no_update")
+                self.lang_manager.get("update", "no_update"),
+                self.dark_mode
             )
     
     def _show_update_dialog(self, version_info):
@@ -901,15 +1073,17 @@ class BookmarkManagerGUI:
         message += f"{self.lang_manager.get('update', 'latest_version')}: {version_info['version']}\n\n"
         message += self.lang_manager.get('update', 'download_question')
         
-        if messagebox.askyesno(self.lang_manager.get("update", "title"), message):
+        if CustomMessageBox.askyesno(self.master, self.lang_manager.get("update", "title"), message, self.dark_mode):
             self._download_and_install_update(version_info)
     
     def _download_and_install_update(self, version_info):
         """업데이트 다운로드 및 설치"""
         if not version_info.get('download_url'):
-            messagebox.showerror(
+            CustomMessageBox.showerror(
+                self.master,
                 self.lang_manager.get("messages", "error"),
-                self.lang_manager.get("update", "download_url_error")
+                self.lang_manager.get("update", "download_url_error"),
+                self.dark_mode
             )
             return
         
@@ -917,6 +1091,13 @@ class BookmarkManagerGUI:
         progress_window.title(self.lang_manager.get("update", "title"))
         progress_window.geometry("400x150")
         progress_window.resizable(False, False)
+        
+        # 아이콘 적용
+        try:
+            if hasattr(self.master, '_icon_path') and self.master._icon_path:
+                progress_window.iconbitmap(self.master._icon_path)
+        except:
+            pass
         
         ttk.Label(progress_window, 
                   text=self.lang_manager.get("update", "download_progress")).pack(pady=20)
@@ -960,9 +1141,11 @@ class BookmarkManagerGUI:
                     
             except Exception as e:
                 progress_window.destroy()
-                messagebox.showerror(
+                CustomMessageBox.showerror(
+                    self.master,
                     self.lang_manager.get("messages", "error"),
-                    f"{self.lang_manager.get('update', 'failed')}\n{str(e)}"
+                    f"{self.lang_manager.get('update', 'failed')}\n{str(e)}",
+                    self.dark_mode
                 )
         
         thread = threading.Thread(target=download_thread)
@@ -972,7 +1155,7 @@ class BookmarkManagerGUI:
     def _visit_github(self):
         """GitHub 방문"""
         import webbrowser
-        webbrowser.open(f"https://github.com/{GITHUB_REPO}")
+        webbrowser.open(f"https://github.com/{GITHUB_REPO}/releases")
     
     def _show_about(self):
         """About 다이얼로그"""
@@ -981,7 +1164,7 @@ class BookmarkManagerGUI:
         about_text += f"{self.lang_manager.get('about', 'description')}\n\n"
         about_text += f"GitHub: {GITHUB_REPO}"
         
-        messagebox.showinfo(self.lang_manager.get("menu", "about"), about_text)
+        CustomMessageBox.showinfo(self.master, self.lang_manager.get("menu", "about"), about_text, self.dark_mode)
     
     def _on_exit(self):
         """종료 시 설정 저장"""
