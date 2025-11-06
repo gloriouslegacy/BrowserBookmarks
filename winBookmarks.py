@@ -624,15 +624,17 @@ def perform_backup(browser_name, backup_dir):
         display_path = src_path if src_path else "자동 감지 실패"
         log_message(f"[오류] {browser_name} 북마크 파일을 찾을 수 없습니다.")
         if gui_instance:
-            CustomMessageBox.showerror(gui_instance.master, "오류", 
+            gui_instance.master.after(0, lambda: CustomMessageBox.showerror(
+                gui_instance.master, "오류",
                 f"{browser_name} 북마크 파일을 찾을 수 없습니다.\n경로 확인:\n{display_path}",
-                gui_instance.dark_mode)
+                gui_instance.dark_mode))
         return False
 
     if not backup_dir:
         if gui_instance:
-            CustomMessageBox.showwarning(gui_instance.master, "경고", "백업 폴더를 선택해주세요.", 
-                gui_instance.dark_mode)
+            gui_instance.master.after(0, lambda: CustomMessageBox.showwarning(
+                gui_instance.master, "경고", "백업 폴더를 선택해주세요.", 
+                gui_instance.dark_mode))
         return False
 
     os.makedirs(backup_dir, exist_ok=True)
@@ -645,9 +647,10 @@ def perform_backup(browser_name, backup_dir):
     except Exception as e:
         log_message(f"[오류] {browser_name} 백업 실패: {e}")
         if gui_instance:
-            CustomMessageBox.showerror(gui_instance.master, "오류", 
+            gui_instance.master.after(0, lambda: CustomMessageBox.showerror(
+                gui_instance.master, "오류", 
                 f"{browser_name} 백업 중 오류 발생: {e}",
-                gui_instance.dark_mode)
+                gui_instance.dark_mode))
         return False
 
 def perform_restore(browser_name, restore_dir):
@@ -659,17 +662,19 @@ def perform_restore(browser_name, restore_dir):
 
     if not os.path.exists(src_path):
         if gui_instance:
-            CustomMessageBox.showerror(gui_instance.master, "오류", 
+            gui_instance.master.after(0, lambda: CustomMessageBox.showerror(
+                gui_instance.master, "오류", 
                 f"복구 파일이 백업 폴더에 없습니다.\n필요한 파일: {backup_filename}",
-                gui_instance.dark_mode)
+                gui_instance.dark_mode))
         return False
 
     if not dst_path or not os.path.exists(os.path.dirname(dst_path)):
          log_message(f"[오류] {browser_name} 복구 대상 경로를 찾을 수 없습니다.")
          if gui_instance:
-             CustomMessageBox.showerror(gui_instance.master, "오류", 
+             gui_instance.master.after(0, lambda: CustomMessageBox.showerror(
+                 gui_instance.master, "오류", 
                  f"{browser_name} 복구 대상 경로를 찾을 수 없습니다.\n브라우저를 한 번 실행해 보세요.",
-                 gui_instance.dark_mode)
+                 gui_instance.dark_mode))
          return False
     
     
@@ -685,9 +690,10 @@ def perform_restore(browser_name, restore_dir):
     except Exception as e:
         log_message(f"[오류] 프로세스 종료 중 예외 발생: {e}")
         if gui_instance:
-            CustomMessageBox.showwarning(gui_instance.master, "경고", 
+            gui_instance.master.after(0, lambda: CustomMessageBox.showwarning(
+                gui_instance.master, "경고", 
                 "브라우저 프로세스 종료에 실패했습니다. 수동으로 종료해 주세요.",
-                gui_instance.dark_mode)
+                gui_instance.dark_mode))
         
     
     # 복구 실행
@@ -706,9 +712,10 @@ def perform_restore(browser_name, restore_dir):
     except Exception as e:
         log_message(f"[오류] {browser_name} 복구 실패: {e}")
         if gui_instance:
-            CustomMessageBox.showerror(gui_instance.master, "오류", 
+            gui_instance.master.after(0, lambda e=e: CustomMessageBox.showerror(
+                gui_instance.master, "오류", 
                 f"{browser_name} 복구 중 오류 발생: {e}",
-                gui_instance.dark_mode)
+                gui_instance.dark_mode))
         
     # 복구 후 프로세스 재실행 로직
     if restore_success and browser_exe:
@@ -719,9 +726,10 @@ def perform_restore(browser_name, restore_dir):
         except Exception as e:
             log_message(f"[오류] 브라우저 재실행 실패: {e}")
             if gui_instance:
-                CustomMessageBox.showwarning(gui_instance.master, "경고", 
+                gui_instance.master.after(0, lambda: CustomMessageBox.showwarning(
+                    gui_instance.master, "경고", 
                     "브라우저 재실행에 실패했습니다. 수동으로 시작해 주세요.",
-                    gui_instance.dark_mode)
+                    gui_instance.dark_mode))
             
     return restore_success
 
@@ -994,7 +1002,14 @@ class BookmarkManagerGUI:
         browser = self.selected_browser.get()
         dir_path = self.backup_dir.get()
         self.config_manager.set("last_browser", browser)
-        perform_backup(browser, dir_path)
+        
+        # 스레드로 백업 작업 실행
+        def backup_thread():
+            perform_backup(browser, dir_path)
+        
+        thread = threading.Thread(target=backup_thread)
+        thread.daemon = True
+        thread.start()
         
     def handle_restore(self):
         browser = self.selected_browser.get()
@@ -1019,7 +1034,13 @@ class BookmarkManagerGUI:
         must_proceed = CustomMessageBox.askyesno(self.master, pre_sync_title, pre_sync_message, self.dark_mode)
         
         if must_proceed:
-            perform_restore(browser, dir_path)
+            # 스레드로 복구 작업 실행
+            def restore_thread():
+                perform_restore(browser, dir_path)
+            
+            thread = threading.Thread(target=restore_thread)
+            thread.daemon = True
+            thread.start()
 
     def clear_log(self):
         self.log_text.config(state='normal')
